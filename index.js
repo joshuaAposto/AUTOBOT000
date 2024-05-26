@@ -9,10 +9,16 @@ const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
   handler: (req, res) => {
-    res.status(429).json({ message: 'Your IP is blocked due to too many requests.' });
+    
+   blockedIPs[clientIp] = true;
+    setTimeout(() => {
+      delete blockedIPs[clientIp];
+    }, 20000); // Unblock after 20 seconds
+
+    res.status(429).json({ message: 'Your IP is blocked due to too many requests. Please try again later.' });
   }
 });
-
+  
 const speedLimiter = slowDown({
   windowMs: 30 * 1000,
   delayAfter: 10,
