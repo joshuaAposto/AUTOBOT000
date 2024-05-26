@@ -1,35 +1,31 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
-const slowDown = require('express-slow-down');
 const https = require('https');
 
 const app = express();
+
+const blockedIPs = new Set();
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
   handler: (req, res) => {
-    
-   blockedIPs[clientIp] = true;
-    setTimeout(() => {
-      delete blockedIPs[clientIp];
-    }, 20000); // Unblock after 20 seconds
+    const clientIp = req.ip;
+    blockedIPs.add(clientIp);
 
     res.status(429).json({ message: 'Your IP is blocked due to too many requests. Please try again later.' });
   }
 });
-  
-const speedLimiter = slowDown({
-  windowMs: 30 * 1000,
-  delayAfter: 10,
-  delayMs: 500,
-  onLimitReached: (req, res) => {
-    res.status(429).json({ message: 'Too many requests, please try again later.' });
+
+// Middleware to block requests from permanently blocked IPs
+app.use((req, res, next) => {
+  if (blockedIPs.has(req.ip)) {
+    return res.status(403).json({ message: 'Your IP has been permanently blocked.' });
   }
+  next();
 });
 
 app.use(limiter);
-app.use(speedLimiter);
 
 app.get('/', (req, res) => {
   https.get('https://www.joshuaapostol.site/', (response) => {
